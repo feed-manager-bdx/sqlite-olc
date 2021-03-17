@@ -20,8 +20,6 @@
 
 #include <sqlite3ext.h>
 #include <string.h>
-#include <stdlib.h>
-#include <malloc.h>
 #include <math.h>
 #include <olc.h>
 
@@ -54,20 +52,97 @@ int get_distance(OLC_LatLon *l, OLC_LatLon *r)
     return (int) (6371e3 * v_c);
 }
 
+#define E_ARG_NULL -1
+#define E_ARG_BAD_TYPE -2
+
+static int checkParams(int argc, sqlite3_value **argv, int expectedType)
+{
+	int hasNull = 0;
+        for (int i = 0; i < argc; ++i) {
+                int type = sqlite3_value_type(argv[i]);
+                if (type == SQLITE_NULL) {
+                        hasNull = 1;
+                } else if (type != expectedType) {
+			return E_ARG_BAD_TYPE;	
+                }
+        }
+        if (hasNull) {
+                return E_ARG_NULL;
+        }
+	return 0;
+}
+
+static int checkParamsOrError(sqlite3_context *context, int argc, sqlite3_value **argv, int expectedType)
+{
+	switch (checkParams(argc, argv, expectedType)) {
+                case E_ARG_BAD_TYPE:
+                        sqlite3_result_error(context, "Invalid parameter type", -1);
+                        return 1;
+                case E_ARG_NULL:
+                        sqlite3_result_null(context);
+                        return 1;
+		default:
+			return 0;
+        }
+}
+
 static void olcDistanceFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-	if (sqlite3_value_type(argv[0]) == SQLITE_NULL || sqlite3_value_type(argv[1]) == SQLITE_NULL){
-		sqlite3_result_null(context);
+	if (checkParamsOrError(context, argc, argv, SQLITE_TEXT) != 0) {
 		return;
 	}
 
 	OLC_LatLon l_center, r_center;
 	if (getCenter(argv[0], &l_center) != 0 || getCenter(argv[1], &r_center) != 0) {
-		sqlite3_result_null(context);
-                return;
+		sqlite3_result_error(context, "Failed to parse OLC", -2);
+		return;
 	}
 
 	int distance = get_distance(&l_center, &r_center);
+	sqlite3_result_int(context, distance); // in meters
+
+}
+
+static void geoDistanceFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+	if (checkParamsOrError(context, argc, argv, SQLITE_FLOAT) != 0) {
+		return;
+	}
+
+	OLC_LatLon l = { 
+		.lat = sqlite3_value_double(argv[0]), 
+		.lon = sqlite3_value_double(argv[1]) 
+	};
+	OLC_LatLon r = { 
+		.lat = sqlite3_value_double(argv[2]), 
+		.lon = sqlite3_value_double(argv[3])
+	};
+
+	int distance = get_distance(&l, &r);
+	sqlite3_result_int(context, distance); // in meters
+}
+
+static void olcGeoDistanceFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+	if (checkParamsOrError(context, 1, argv+0, SQLITE_TEXT) != 0) {
+		return;
+	}
+	if (checkParamsOrError(context, 2, argv+1, SQLITE_FLOAT) != 0) {
+		return;
+	}
+
+	OLC_LatLon r = { 
+		.lat = sqlite3_value_double(argv[1]), 
+		.lon = sqlite3_value_double(argv[2])
+       	};
+
+	OLC_LatLon l_center;
+	if (getCenter(argv[0], &l_center) != 0) {
+		sqlite3_result_error(context, "Failed to parse OLC", -2);
+		return;
+	}
+
+	int distance = get_distance(&l_center, &r);
 	sqlite3_result_int(context, distance); // in meters
 }
 
@@ -78,5 +153,7 @@ int sqlite3_extension_init(
 ){
 	SQLITE_EXTENSION_INIT2(pApi)
 	sqlite3_create_function(db, "olc_distance", 2, SQLITE_ANY, 0, olcDistanceFunc, 0, 0);
+	sqlite3_create_function(db, "geo_distance", 4, SQLITE_ANY, 0, geoDistanceFunc, 0, 0);
+	sqlite3_create_function(db, "olc_geo_distance", 3, SQLITE_ANY, 0, olcGeoDistanceFunc, 0, 0);
 	return 0;
 }
