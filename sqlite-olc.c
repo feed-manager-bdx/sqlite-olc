@@ -18,7 +18,11 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifdef __WIN32
+#include "/usr/include/sqlite3ext.h"
+#else
 #include <sqlite3ext.h>
+#endif
 #include <string.h>
 #include <math.h>
 #include <olc.h>
@@ -26,6 +30,7 @@
 SQLITE_EXTENSION_INIT1
 
 #define DEG_TO_RAD(x) ((x) / 180 * M_PI)
+#define MEAN_EARTH_RADIUS 6371e3
 
 static int getCenter(sqlite3_value *value, OLC_LatLon *center)
 {
@@ -49,7 +54,7 @@ int get_distance(OLC_LatLon *l, OLC_LatLon *r)
     double v_a = pow(sin(dLat/2), 2) + cos_l_lat * cos_r_lat * pow(sin(dLon/2), 2);
     double v_c = 2 * atan2(sqrt(v_a), sqrt(1-v_a));
     
-    return (int) (6371e3 * v_c);
+    return (int) (MEAN_EARTH_RADIUS * v_c);
 }
 
 #define E_ARG_NULL -1
