@@ -30,9 +30,23 @@
 SQLITE_EXTENSION_INIT1
 
 #define DEG_TO_RAD(x) ((x) / 180 * M_PI)
-#define MEAN_EARTH_RADIUS 6371e3
+#define EARTH_RADIUS_AT_EQTR 6378137
+#define EARTH_RADIUS_AT_POLE 6356752
 
-static int getCenter(sqlite3_value *value, OLC_LatLon *center)
+static double get_earth_radius(double lat) 
+{
+    return sqrt(
+	(
+            pow(pow(EARTH_RADIUS_AT_EQTR, 2) * cos(lat), 2) +
+	    pow(pow(EARTH_RADIUS_AT_POLE, 2) * sin(lat), 2)
+	) / (
+            pow(EARTH_RADIUS_AT_POLE * cos(lat), 2) +
+	    pow(EARTH_RADIUS_AT_POLE * sin(lat), 2)
+	)
+    );
+}
+
+static int get_center(sqlite3_value *value, OLC_LatLon *center)
 {
         OLC_CodeArea area;
 	const char *str = (const char *) sqlite3_value_text(value);
@@ -54,7 +68,7 @@ int get_distance(OLC_LatLon *l, OLC_LatLon *r)
     double v_a = pow(sin(dLat/2), 2) + cos_l_lat * cos_r_lat * pow(sin(dLon/2), 2);
     double v_c = 2 * atan2(sqrt(v_a), sqrt(1-v_a));
     
-    return (int) (MEAN_EARTH_RADIUS * v_c);
+    return (int) (get_earth_radius(l->lat) * v_c);
 }
 
 #define E_ARG_NULL -1
@@ -98,7 +112,7 @@ static void olcDistanceFunc(sqlite3_context *context, int argc, sqlite3_value **
 	}
 
 	OLC_LatLon l_center, r_center;
-	if (getCenter(argv[0], &l_center) != 0 || getCenter(argv[1], &r_center) != 0) {
+	if (get_center(argv[0], &l_center) != 0 || get_center(argv[1], &r_center) != 0) {
 		sqlite3_result_error(context, "Failed to parse OLC", -2);
 		return;
 	}
@@ -142,7 +156,7 @@ static void olcGeoDistanceFunc(sqlite3_context *context, int argc, sqlite3_value
        	};
 
 	OLC_LatLon l_center;
-	if (getCenter(argv[0], &l_center) != 0) {
+	if (get_center(argv[0], &l_center) != 0) {
 		sqlite3_result_error(context, "Failed to parse OLC", -2);
 		return;
 	}
