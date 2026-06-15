@@ -15,8 +15,8 @@ L'extension s'appuie sur la bibliothèque officielle [google/open-location-code]
 | Élément | Détail |
 | --- | --- |
 | Langage | C |
-| Cible de build | Bibliothèque partagée (`.so` sous Linux/macOS, `.dll` sous Windows) |
-| Compilateur | `gcc` (Linux/macOS), `x86_64-w64-mingw32-gcc` (Windows, cross-compilation) |
+| Cible de build | Bibliothèque partagée (`.so` sous Linux, `.dll` sous Windows) |
+| Compilateur | `gcc` (Linux), `x86_64-w64-mingw32-gcc` (Windows, cross-compilation) |
 | Build | `make` (`Makefile`) |
 | Dépendances natives | En-têtes SQLite (`sqlite3ext.h`), bibliothèque mathématique (`math.h`) |
 | Dépendance externe | `google/open-location-code` (sous-module Git, code C) |
