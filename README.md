@@ -28,7 +28,7 @@ L'extension s'appuie sur la bibliothèque officielle [google/open-location-code]
 ```
 .
 ├── sqlite-olc.c        # Code source de l'extension (fonctions SQL et calcul de distance)
-├── Makefile            # Cibles de build : `all` (Linux/macOS) et `windows` (cross-compilation)
+├── Makefile            # Cibles de build : `all` (Linux) et `windows` (cross-compilation)
 ├── test.py             # Exemple d'utilisation et test manuel en Python
 ├── open-location-code/ # Sous-module Git : bibliothèque Google Open Location Code (code C utilisé via c/src/)
 ├── .gitmodules         # Déclaration du sous-module open-location-code
